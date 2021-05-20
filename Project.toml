@@ -1,0 +1,13 @@
+name = "ErrorBudget"
+uuid = "06e7a5bc-98e3-4f0e-9304-f3ab7a46b6ed"
+authors = ["Irene Ndindabahizi"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
