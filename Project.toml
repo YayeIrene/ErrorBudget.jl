@@ -3,6 +3,10 @@ uuid = "06e7a5bc-98e3-4f0e-9304-f3ab7a46b6ed"
 authors = ["Irene Ndindabahizi"]
 version = "0.1.0"
 
+[deps]
+Cuas = "5e7100d4-50d8-4520-bbe7-ebd075d2e2c0"
+ExternalBallistics = "b491e135-ab2a-4d40-88dd-d272818f63e6"
+
 [compat]
 julia = "1"
 
