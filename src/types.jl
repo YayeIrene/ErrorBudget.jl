@@ -31,3 +31,11 @@ end
 mutable struct FlightError
     aero::Tuple{Float64, Float64}
 end
+
+mutable struct UnitEffect
+    velocity::Vector{Float64}
+    temp::Vector{Float64}
+    density::Vector{Float64}
+    windR::Vector{Float64}
+    windC::Vector{Float64}
+end

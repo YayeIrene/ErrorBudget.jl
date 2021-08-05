@@ -6,6 +6,6 @@ include("types.jl")
 include("paralax.jl")
 include("totalError.jl")
 
-export μ, AimingError, AlignmentError, LofError, FlightError
+export μ, AimingError, AlignmentError, LofError, FlightError, σ, UnitEffect
 
 end
