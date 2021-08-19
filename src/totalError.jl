@@ -1,4 +1,4 @@
-function μ(gun::Canon, target::AbstractTarget)
+function μ(gun::Gun, target::AbstractTarget)
     μx = paralax(gun,target)[1]*target.position
     μy = paralax(gun,target)[2]*target.position
     return μx,μy
@@ -29,4 +29,12 @@ function σ(aiming::AimingError,align::AlignmentError,lof::LofError,flight::Flig
     σ_x =sqrt(aiming_error(aiming)[1]^2+alignment_error(align)[1]^2+lof_error(lof)[1]^2+flight_error(flight)[1]^2)
     σ_y =sqrt(aiming_error(aiming)[2]^2+alignment_error(align)[2]^2+lof_error(lof)[2]^2+flight_error(flight)[2]^2)
     return σ_x, σ_y
+end
+
+function σ(;σfixed=Error(0.0,0.0), σvariable=Error(0.0,0.0), σrandom=Error(0.0,0.0))
+    σv = σfixed.vertical + sqrt(σvariblze.vertical^2 + σrandom.vertical^2)
+    σh = σfixed.horizontal + sqrt(σvariblze.horizontal^2 + σrandom.horizontal^2)
+    σtot = Error(σh,σv)
+
+    return σtot
 end

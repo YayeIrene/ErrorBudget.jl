@@ -39,3 +39,8 @@ mutable struct UnitEffect
     windR::Vector{Float64}
     windC::Vector{Float64}
 end
+
+mutable struct Error
+    horizontal::Float64
+    vertical::Float64
+end

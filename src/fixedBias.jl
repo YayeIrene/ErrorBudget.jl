@@ -4,12 +4,15 @@ function paralax(gun::Gun,target::AbstractTarget)
     return h,v
 end
 
+function jump()
+end
 
+function drift()
+end
 
+function ballistic()
+end
 
-function fixedBias(gun::Gun,target::AbstractTarget,proj::AbstractPenetrator)
-    h,v = paralax(gun,target)
-    drift = QEfinderMPMM!(target, proj, gun)[2]
-    return h+drift, v
+function fixedBias()
 
 end
