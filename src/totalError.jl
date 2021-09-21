@@ -32,8 +32,8 @@ function σ(aiming::AimingError,align::AlignmentError,lof::LofError,flight::Flig
 end
 
 function σ(;σfixed=Error(0.0,0.0), σvariable=Error(0.0,0.0), σrandom=Error(0.0,0.0))
-    σv = σfixed.vertical + sqrt(σvariblze.vertical^2 + σrandom.vertical^2)
-    σh = σfixed.horizontal + sqrt(σvariblze.horizontal^2 + σrandom.horizontal^2)
+    σv = σfixed.vertical + sqrt(σvariable.vertical^2 + σrandom.vertical^2)
+    σh = σfixed.horizontal + sqrt(σvariable.horizontal^2 + σrandom.horizontal^2)
     σtot = Error(σh,σv)
 
     return σtot
