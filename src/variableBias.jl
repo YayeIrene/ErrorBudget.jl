@@ -14,7 +14,7 @@ function windEffect(target::AbstractTarget, proj::AbstractPenetrator, gun::Gun,w
     return impactBaseline-impactWind
 
 end
-function windCrossError(σ::Float64,wind::Wind,tourelle::Tourelle, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
+function windCrossError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
     d = Normal(wind.cross,σ)
 #drange = Normal(w.range,σrange)
 
@@ -27,7 +27,7 @@ function windCrossError(σ::Float64,wind::Wind,tourelle::Tourelle, weapon::Gun,p
         wind.cross = x[i]
 #w.range = xrange
 
-        windIn = Cuas.wind(tourelle,weapon, wind)
+        windIn = Cuas.wind(tank, wind)
         res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][3]
 #push!(res,tmp)
     end
@@ -36,7 +36,7 @@ function windCrossError(σ::Float64,wind::Wind,tourelle::Tourelle, weapon::Gun,p
     return σcrossₜ
 end
 
-function windRangeError(σ::Float64,wind::Wind,tourelle::Tourelle, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
+function windRangeError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
 
     d = Normal(wind.range,σ)
     x = rand(d, N)
@@ -46,7 +46,7 @@ function windRangeError(σ::Float64,wind::Wind,tourelle::Tourelle, weapon::Gun,p
     #w.cross = xcross[i]
     wind.range = x[i]
 
-    windIn = Cuas.wind(tourelle,weapon, wind)
+    windIn = Cuas.wind(tank, wind)
     res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][2]
     #push!(res,tmp)
     end
@@ -61,7 +61,7 @@ function interTable(range::Array{Float64,1},jumpTable::Array{Float64,1}, value::
     inter(value)
 end
 
-function rangeError(target::AbstractTarget, σ::Float64, tourelle::Tourelle, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame; N=100)
+function rangeError(target::AbstractTarget, σ::Float64, tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame; N=100)
 
     d = Normal(target.ρ,σ)
     x = rand(d, N)
@@ -69,7 +69,7 @@ function rangeError(target::AbstractTarget, σ::Float64, tourelle::Tourelle, wea
     AZ = zeros(N)
     for i=1:N
         target.ρ = x[i]
-        target.position = targetPos(target, tourelle, weapon)
+        target.position = targetPos(target, tank)
 
     QE[i],AZ[i]=QEfinderMPMM!(target, proj, weapon,aero)
     #println("QE", " ", QE[i])
@@ -82,7 +82,7 @@ function rangeError(target::AbstractTarget, σ::Float64, tourelle::Tourelle, wea
     return σQE,σAZ
 end
 
-function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame;N=100 )
+function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.AZ = rad2deg(AZ)
     d = Normal(QE,σ)
@@ -92,9 +92,9 @@ function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
 
     for i=1:N
         weapon.QE=rad2deg(x[i])
-        target.position= targetPos(target, tourelle, weapon)
-        proj.position=muzzlePos(weapon, tourelle)
-        proj.velocity=muzzleVel(weapon,tourelle)
+        target.position= targetPos(target, tank)
+        proj.position=muzzlePos(tank)
+        proj.velocity=muzzleVel(tank)
 
 
     resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
@@ -110,7 +110,7 @@ function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
 
 end
 
-function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame;N=100 )
+function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
     d = Normal(AZ,σ)
@@ -120,9 +120,9 @@ function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrat
 
     for i=1:N
         weapon.AZ=rad2deg(x[i])
-        target.position= targetPos(target, tourelle, weapon)
-        proj.position=muzzlePos(weapon, tourelle)
-        proj.velocity=muzzleVel(weapon,tourelle)
+        target.position= targetPos(target, tank)
+        proj.position=muzzlePos(tank)
+        proj.velocity=muzzleVel(tank)
 
 
         resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
@@ -138,12 +138,12 @@ function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrat
 
 end
 
-function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame;N=100)
+function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
     weapon.AZ = rad2deg(AZ)
-    target.position= targetPos(target, tourelle, weapon)
-    proj.position=muzzlePos(weapon, tourelle)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     d = Normal(weapon.u₀,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
@@ -152,7 +152,7 @@ function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
     for i=1:N
 
         weapon.u₀ = x[i]
-        proj.velocity=muzzleVel(weapon,tourelle)
+        proj.velocity=muzzleVel(tank)
 
         resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
@@ -166,13 +166,13 @@ function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
     return σv ,σh
 end
 
-function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame,atmosphere::Air;N=100)
+function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
     weapon.QE = rad2deg(QE)
     weapon.AZ = rad2deg(AZ)
-    proj.velocity=muzzleVel(weapon,tourelle)
-    target.position= targetPos(target, tourelle, weapon)
-    proj.position=muzzlePos(weapon, tourelle)
+    proj.velocity=muzzleVel(tank)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     d = Normal(atmosphere.t,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
@@ -195,13 +195,13 @@ function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPene
 
 end
 
-function pressureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame,atmosphere::Air;N=100)
+function pressureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
     weapon.QE = rad2deg(QE)
     weapon.AZ = rad2deg(AZ)
-    proj.velocity=muzzleVel(weapon,tourelle)
-    target.position= targetPos(target, tourelle, weapon)
-    proj.position=muzzlePos(weapon, tourelle)
+    proj.velocity=muzzleVel(tank)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     d = Normal(atmosphere.p,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
@@ -224,13 +224,13 @@ function pressureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetra
 
 end
 
-function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tourelle::Tourelle,aero::DataFrame,atmosphere::Air;N=100)
+function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
     weapon.QE = rad2deg(QE)
     weapon.AZ = rad2deg(AZ)
-    proj.velocity=muzzleVel(weapon,tourelle)
-    target.position= targetPos(target, tourelle, weapon)
-    proj.position=muzzlePos(weapon, tourelle)
+    proj.velocity=muzzleVel(tank)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     dx = Normal(proj.position[1],σ)
     dy = Normal(proj.position[2],σ)
     dz = Normal(proj.position[3],σ)
@@ -257,7 +257,7 @@ function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPene
 
 end
 
-function cantError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
+function cantError(σ::Float64, σmeas::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
     weapon.AZ = rad2deg(AZ)
@@ -268,28 +268,41 @@ function cantError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,
     proj.position=muzzlePos(tank)
     proj.velocity=muzzleVel(tank)
 
-    d = Normal(tank.hull.Φ,σ)
+    d1 = Normal(tank.hull.Φ,σ)
 
-    x = rand(d, N)
+    x1 = rand(d1, N)
 
-    resV = zeros(N)#Arra
-    resH = zeros(N)#Arra
+    resV1 = zeros(N)#Arra
+    resH1 = zeros(N)#Arra
 
     for i=1:N
 
-        tank.hull.Φ = x[i]
+        #tank.hull.Φ = x[i]
 
-        target.position = targetPos(target, tank)
-        proj.position=muzzlePos(tank)
-        proj.velocity=muzzleVel(tank)
+        d2 = Normal(x1[i],σmeas)
+        resV2 = zeros(N)#Arra
+        resH2 = zeros(N)#Arra
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        x2 = rand(d2, N)
+        for j=1:N
+
+            tank.hull.Φ = x2[j]
+
+            target.position = targetPos(target, tank)
+            proj.position=muzzlePos(tank)
+            proj.velocity=muzzleVel(tank)
+
+            resV2[j], resH2[j]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        end
+        resV1[i] =fit(Normal, resV2).μ
+        resH1[i] =fit(Normal, resH2).μ
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
-    σv =fit(Normal, resV)
-    σh =fit(Normal, resH)
+    σv =fit(Normal, resV1)
+    σh =fit(Normal, resH1)
+
 
 
     return σv ,σh
@@ -299,9 +312,9 @@ end
 
 
 
-function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame, wind::Wind;
+function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame, wind::Wind, atmosphere::Air;
     σrange=nothing, σcross_wind=nothing,σrange_wind=nothing,σjump=Error(0.0,0.0),σfc=Error(0.0,0.0),σzeroing=Error(0.0,0.0),σboresight=Error(0.0,0.0),
-    σMv=nothing, σtemp=nothing, σpress=nothing, σopt=Error(0.0,0.0), σgun=nothing, σcant =nothing)
+    σMv=nothing, σtemp=nothing, σpress=nothing, σopt=Error(0.0,0.0), σgun=nothing, σcant =nothing, σcant_meas=nothing)
 
 σvariable =Error(0.0,0.0)
 σR=Error(0.0,0.0)
@@ -321,60 +334,81 @@ function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::Abst
 
 if isnothing(σrange)==false
 
-dQE,dAZ=rangeError(target,σrange,tourelle, weapon, proj, aero)
+dQE,dAZ=rangeError(target,σrange,tank, weapon, proj, aero)
 
-σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tourelle,aero)
-σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tourelle,aero)
+σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tank,aero)
+σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tank,aero)
 
 
-σR.horizontal = sqrt((rand(σhEl))^2+(rand(σhAz))^2)
-σR.vertical = sqrt((rand(σvEl))^2+(rand(σvAz))^2)
+#σR.horizontal = sqrt((rand(σhEl))^2+(rand(σhAz))^2)
+#σR.vertical = sqrt((rand(σvEl))^2+(rand(σvAz))^2)
+
+σR.horizontal = sqrt((σhEl.σ)^2+(σhAz.σ)^2)
+σR.vertical = sqrt((σvEl.σ)^2+(σvAz.σ)^2)
 
 end
 
-if isnothin(σcross_wind)==false
-σcross_dist= windCrossError(σcross_wind,wind,tourelle,weapon, proj, target, aero) #m
-σcross_value =rand(σcross_dist)
+if isnothing(σcross_wind)==false
+σcross_dist= windCrossError(σcross_wind,wind,tank,weapon, proj, target, aero) #m
+#σcross_value =rand(σcross_dist)
+σcross_value =σcross_dist.σ
 end
 
 if isnothing(σrange_wind)==false
-σrange_dist=windRangeError(σrange_wind,wind,tourelle,weapon, proj, target, aero) #m
-σrange_value =rand(σrange_dist)
+σrange_dist=windRangeError(σrange_wind,wind,tank,weapon, proj, target, aero) #m
+#σrange_value =rand(σrange_dist)
+σrange_value =σrange_dist.σ
 end
 
 if isnothing(σMv)==false
-σMVvₜ, σMVhₜ = muzzleVelError(σMv, target,proj,weapon,tourelle,aero)
+σMVvₜ, σMVhₜ = muzzleVelError(σMv, target,proj,weapon,tank,aero)
 
-σMVv_value = rand(σMVvₜ)
-σMVh_value = rand(σMVhₜ)
+#σMVv_value = rand(σMVvₜ)
+#σMVh_value = rand(σMVhₜ)
+σMVv_value = σMVvₜ.σ
+σMVh_value = σMVhₜ.σ
 end
 
 if isnothing(σtemp)==false
-σtempV, σtempH = temperatureError(σtemp, target,proj,weapon,tourelle,aero,atmosphere)
+σtempV, σtempH = temperatureError(σtemp, target,proj,weapon,tank,aero,atmosphere)
 
-σtempV_value = rand(σtempV)
-σtempH_value = rand(σtempH)
+#σtempV_value = rand(σtempV)
+#σtempH_value = rand(σtempH)
+
+σtempV_value = σtempV.σ
+σtempH_value = σtempH.σ
+
 end
 
 if isnothing(σpress)==false
-    σpressV, σpressH = pressureError(σpress, target,proj,weapon,tourelle,aero,atmosphere)
+    σpressV, σpressH = pressureError(σpress, target,proj,weapon,tank,aero,atmosphere)
 
-    σpressV_value = rand(σpressV)
-    σpressH_value = rand(σpressH)
+#    σpressV_value = rand(σpressV)
+#    σpressH_value = rand(σpressH)
+
+    σpressV_value = σpressV.σ
+    σpressH_value = σpressH.σ
 end
 
 if isnothing(σgun)==false
-    σgunV, σgunH = gunPositionError(σgun, target,proj,weapon,tourelle,aero,atmosphere)
+    σgunV, σgunH = gunPositionError(σgun, target,proj,weapon,tank,aero,atmosphere)
 
-    σgunV_value = rand(σgunV)
-    σgunH_value = rand(σgunH)
+#    σgunV_value = rand(σgunV)
+#    σgunH_value = rand(σgunH)
+
+    σgunV_value = σgunV.σ
+    σgunH_value = σgunH.σ
+
 end
 
 if isnothing(σcant)==false
-    σcantV, σcantH = cantError(σcant, target,proj,weapon,tant,aero)
+    σcantV, σcantH = cantError(σcant,σcant_meas, target,proj,weapon,tank,aero)
 
-    σcantV_value = rand(σcantV)
-    σcantH_value = rand(σcantH)
+#    σcantV_value = rand(σcantV)
+#    σcantH_value = rand(σcantH)
+
+    σcantV_value = σcantV.σ
+    σcantH_value = σcantH.σ
 end
 
 σvariable.horizontal = sqrt(σR.horizontal^2+σcross_value^2+σjump.horizontal^2+σfc.horizontal^2+σzeroing.horizontal^2+
