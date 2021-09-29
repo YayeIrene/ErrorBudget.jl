@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+ErrorBudget = "06e7a5bc-98e3-4f0e-9304-f3ab7a46b6ed"
+
+[compat]
+Documenter = "0.27"
