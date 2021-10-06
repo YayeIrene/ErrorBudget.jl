@@ -1044,7 +1044,7 @@ version = "0.1.2"
 [[WeaponSystems]]
 git-tree-sha1 = "c26e42bafda84645fa758fa75731091e7fe30317"
 repo-rev = "master"
-repo-url = "C:\\Users\\PC1\\.julia\\dev\\WeaponSystems"
+repo-url = "https://github.com/YayeIrene/WeaponSystems.jl"
 uuid = "9546f4ee-7fe2-43c4-b924-f2649be2f5c5"
 version = "0.1.0"
 
