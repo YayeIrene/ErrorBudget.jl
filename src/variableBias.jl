@@ -43,7 +43,7 @@ function windCrossError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::Abs
         wind.cross = x[i]
 #w.range = xrange
 
-        windIn = Cuas.wind(tank, wind)
+        windIn = wind(tank, wind)
         res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][3]
 #push!(res,tmp)
     end
@@ -77,7 +77,7 @@ function windRangeError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::Abs
     #w.cross = xcross[i]
     wind.range = x[i]
 
-    windIn = Cuas.wind(tank, wind)
+    windIn = wind(tank, wind)
     res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][2]
     #push!(res,tmp)
     end
