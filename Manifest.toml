@@ -424,6 +424,13 @@ uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
+[[WeaponSystems]]
+git-tree-sha1 = "c26e42bafda84645fa758fa75731091e7fe30317"
+repo-rev = "master"
+repo-url = "C:\\Users\\PC1\\.julia\\dev\\WeaponSystems"
+uuid = "9546f4ee-7fe2-43c4-b924-f2649be2f5c5"
+version = "0.1.0"
+
 [[WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "59e2ad8fd1591ea019a5259bd012d7aee15f995c"
