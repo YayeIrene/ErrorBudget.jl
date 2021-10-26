@@ -14,6 +14,22 @@ function windEffect(target::AbstractTarget, proj::AbstractPenetrator, gun::Gun,w
     return impactBaseline-impactWind
 
 end
+
+"""
+    windCrossError(σ,wind,tank, weapon,proj, target, aero;args ...)
+
+Returns the normal distribution for the impact points (horizontal coordinate).
+    The function performs a Monte Carlo simulation by sampling the wind (cross field).
+        It is assumes that the cross wind variation is a gaussian distribution with
+        μ = wind.cross and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function windCrossError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
     d = Normal(wind.cross,σ)
 #drange = Normal(w.range,σrange)
@@ -36,6 +52,21 @@ function windCrossError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::Abs
     return σcrossₜ
 end
 
+"""
+    windRangeError(σ,wind,tank, weapon,proj, target, aero;args ...)
+
+Returns the normal distribution for the impact points (vertical coordinate).
+    The function performs a Monte Carlo simulation by sampling the wind (range field).
+        It is assumes that the range wind variation is a gaussian distribution with
+        μ = wind.range and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function windRangeError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
 
     d = Normal(wind.range,σ)
@@ -56,11 +87,32 @@ function windRangeError(σ::Float64,wind::Wind,tank::Tank, weapon::Gun,proj::Abs
     return σrangeₜ
 end
 
+"""
+    interTable(range,jumpTable, value)
+
+Returns the 'value' from an interpolation table 'jumpTable' over the 'range'
+
+"""
 function interTable(range::Array{Float64,1},jumpTable::Array{Float64,1}, value::Float64)
     inter=LinearInterpolation(range, jumpTable, extrapolation_bc=Flat())
     inter(value)
 end
 
+"""
+    rangeError(target, σ, tank, weapon, proj, aero; args)
+
+Returns the normal distribution for elevation and azimuth angles.
+    The function performs a Monte Carlo simulation by sampling the target range.
+        It is assumes that the range variation is a gaussian distribution with
+        μ = target.ρ and standard deviation = σ. For each sampled range, a elevation and azimuth angle is computed.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function rangeError(target::AbstractTarget, σ::Float64, tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame; N=100)
 
     d = Normal(target.ρ,σ)
@@ -82,6 +134,21 @@ function rangeError(target::AbstractTarget, σ::Float64, tank::Tank, weapon::Gun
     return σQE,σAZ
 end
 
+"""
+    elevationError(σ, target,proj,weapon,tank,aero;args )
+
+Returns the normal distribution for the impact points (vertical and horizontal distribution).
+    The function performs a Monte Carlo simulation by sampling the elevation angle.
+        It is assumes that the elevation angle variation is a gaussian distribution with
+        μ = the compute elevation angle and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.AZ = rad2deg(AZ)
@@ -110,6 +177,21 @@ function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
 
 end
 
+"""
+    azimuthError(σ, target,proj,weapon,tank,aero;args )
+
+Returns the normal distribution for the impact points (vertical and horizontal distribution).
+    The function performs a Monte Carlo simulation by sampling the azimuth angle.
+        It is assumes that the elevation angle variation is a gaussian distribution with
+        μ = the computed azimuth angle and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
@@ -138,6 +220,21 @@ function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrat
 
 end
 
+"""
+    muzzleVelError(σ, target,proj,weapon,tank,aero;args )
+
+Returns the normal distribution for the impact points (vertical and horizontal distribution).
+    The function performs a Monte Carlo simulation by sampling the muzzle velocity.
+        It is assumes that the muzzle velocity variation is a gaussian distribution with
+        μ = weapon.u₀ and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
@@ -166,6 +263,22 @@ function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetr
     return σv ,σh
 end
 
+"""
+    temperatureError(σ, target,proj,weapon,tank,aero, atmosphere;args )
+
+Returns the normal distribution for the impact points (vertical and horizontal distribution).
+    The function performs a Monte Carlo simulation by sampling the air temperature.
+        It is assumes that the temperature variation is a gaussian distribution with
+        μ = atmosphere.t and standard deviation = σ.
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        * atmosphere: the atmospheric characteristics
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
     weapon.QE = rad2deg(QE)
@@ -257,6 +370,24 @@ function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPene
 
 end
 
+"""
+    cantError(σ, σmeas, target,proj,weapon,tank,aero, atmosphere;args )
+
+Returns the normal distribution for the impact points (vertical and horizontal distribution).
+    The function performs a Monte Carlo simulation by sampling the cant angle.
+        It is assumes that the cant variation is a gaussian distribution with
+        μ = tank.hull.Φ and standard deviation = σ. On this value of cant we perform another sampling to
+        take into account the measurement error. We assume also a normal distribution with μ = sampled cant and
+        the standard deviation = σmeas
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+
+        One optional argument is N (the number of Monte Carlo simulations). Default = 100
+
+"""
 function cantError(σ::Float64, σmeas::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
     QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
     weapon.QE = rad2deg(QE)
@@ -311,7 +442,24 @@ end
 
 
 
+"""
+variableBias(target,tank, weapon, proj, aero, wind, atmosphere;args ...)
 
+
+Returns the variable bias error as an objet "Error".
+optional arguments are all the standard deviation of error sources: σrange, σcross_wind,σrange_wind,
+σjump,σfc,σzeroing,σboresight,σMv, σtemp, σpress, σopt, σgun, σcant, σcant_meas
+default values for optional parameters are nothing or nul.
+
+        * tank
+        * weapon : the launcher of type Gun
+        * proj : the projectile
+        * target
+        * aero : the aerodynamic coefficients of the projectile
+        * wind
+        * atmosphere
+
+"""
 function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame, wind::Wind, atmosphere::Air;
     σrange=nothing, σcross_wind=nothing,σrange_wind=nothing,σjump=Error(0.0,0.0),σfc=Error(0.0,0.0),σzeroing=Error(0.0,0.0),σboresight=Error(0.0,0.0),
     σMv=nothing, σtemp=nothing, σpress=nothing, σopt=Error(0.0,0.0), σgun=nothing, σcant =nothing, σcant_meas=nothing)
