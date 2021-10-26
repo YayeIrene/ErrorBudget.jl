@@ -309,9 +309,9 @@ version = "0.1.6"
 
 [[ExternalBallistics]]
 deps = ["DataFrames", "DifferentialEquations", "Distances", "Distributions", "Documenter", "Interpolations", "LinearAlgebra"]
-git-tree-sha1 = "596092d47cdf424b7857d847bb6382590a91ad6d"
+git-tree-sha1 = "2c0d1f3ea03d351e6f8ab127215763aa5775527c"
 repo-rev = "master"
-repo-url = "https://github.com/YayeIrene/ExternalBallistics.jl"
+repo-url = "C:\\Users\\PC1\\.julia\\dev\\ExternalBallistics"
 uuid = "b491e135-ab2a-4d40-88dd-d272818f63e6"
 version = "0.1.0"
 
@@ -1044,7 +1044,7 @@ version = "0.1.2"
 [[WeaponSystems]]
 git-tree-sha1 = "c26e42bafda84645fa758fa75731091e7fe30317"
 repo-rev = "master"
-repo-url = "https://github.com/YayeIrene/WeaponSystems.jl"
+repo-url = "C:\\Users\\PC1\\.julia\\dev\\WeaponSystems"
 uuid = "9546f4ee-7fe2-43c4-b924-f2649be2f5c5"
 version = "0.1.0"
 

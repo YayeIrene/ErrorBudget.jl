@@ -7,7 +7,6 @@ using Interpolations
 
 # Write your package code here.
 include("types.jl")
-#include("transformations.jl")
 include("paralax.jl")
 include("variableBias.jl")
 include("totalError.jl")
