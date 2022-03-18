@@ -635,25 +635,27 @@ function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::Abst
 
 
 if isnothing(σrange)==false
+    σrR,σrV, σrH=rangeError(target,σrange,tank, weapon, proj, aero)
 
-dQE,dAZ=rangeError(target,σrange,tank, weapon, proj, aero)
+#dQE,dAZ=rangeError(target,σrange,tank, weapon, proj, aero)
 
-σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tank,aero)
-σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tank,aero)
+#σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tank,aero)
+#σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tank,aero)
 
 
 #σR.horizontal = sqrt((rand(σhEl))^2+(rand(σhAz))^2)
 #σR.vertical = sqrt((rand(σvEl))^2+(rand(σvAz))^2)
 
-σR.horizontal = sqrt((σhEl.σ)^2+(σhAz.σ)^2)
-σR.vertical = sqrt((σvEl.σ)^2+(σvAz.σ)^2)
+σR.horizontal = σrH.σ #sqrt((σhEl.σ)^2+(σhAz.σ)^2)
+σR.vertical = σrV.σ#sqrt((σvEl.σ)^2+(σvAz.σ)^2)
 
 end
 
 if isnothing(σcross_wind)==false
-σcross_dist= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero) #m
+#σcross_dist= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero) #m
+σcrossₜ,σcrossV,σcrossR= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero)[1:3]
 #σcross_value =rand(σcross_dist)
-σcross_value =σcross_dist.σ
+σcross_value =σcrossₜ.σ#σcross_dist.σ
 end
 
 if isnothing(σrange_wind)==false
