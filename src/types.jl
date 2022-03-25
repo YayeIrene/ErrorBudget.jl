@@ -100,3 +100,17 @@ mutable struct Error
     horizontal::Float64
     vertical::Float64
 end
+"""
+SpheError(σ_x,σ_y,σ_z,μ_x,μ_y,μ_z)
+
+Returns a spherical error object with standard deviation and center of impact points
+
+"""
+mutable struct SpheError <:AbstractTarget
+    σ_x::Float64
+    σ_y::Float64
+    σ_z::Float64
+    μ_x::Float64
+    μ_y::Float64
+    μ_z::Float64
+end
