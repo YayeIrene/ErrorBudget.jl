@@ -100,6 +100,18 @@ mutable struct Error
     horizontal::Float64
     vertical::Float64
 end
+
+"""
+    Error3D(range, vertical, horizontal)
+
+Returns the Error object with field: 'range', 'horizontal' and 'vertical'
+"""
+mutable struct Error3D
+    range::Float64    
+    vertical::Float64
+    horizontal::Float64
+end
+
 """
 SpheError(σ_x,σ_y,σ_z,μ_x,μ_y,μ_z)
 

@@ -18,7 +18,8 @@ end
 """
     windCrossError(σ,wind,tank, weapon,proj, target, aero;args ...)
 
-Returns the normal distribution for the impact points (horizontal coordinate).
+Returns the normal distribution for the impact points (horizontal coordinate) and a vector that 
+    contains the horizontal impact points coordinates generated in the Monte Carlo.
 The function performs a Monte Carlo simulation by sampling the wind (cross field).
 It is assumes that the cross wind variation is a gaussian distribution with
 μ = wind.cross and standard deviation = σ:
@@ -30,32 +31,44 @@ It is assumes that the cross wind variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function windCrossError(σ::Float64,w::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
+function windCrossError(σ::Float64,w::Wind,tankOR::Tank, weaponOR::Gun,projOR::AbstractPenetrator, targetOR::AbstractTarget, aero::DataFrame;N=100)
+    #windIn = wind(tank, w)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    #println("adjusting")
+    adjustedFire!(target, proj, weapon,aero,tank,w=w)
+    #println("adjusted")
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     d = Normal(w.cross,σ)
-#drange = Normal(w.range,σrange)
-
     x = rand(d, N)
-#xrange = rand(drange, 100)
 
-    res = zeros(N)#Array{Float64}#[]
+    #res = zeros(N)#Array{Float64}#[]
+    resV = zeros(N)#Arra
+    resH = zeros(N)#Arra
+    resR = zeros(N)#Arra
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
     for i=1:N
-
         w.cross = x[i]
-#w.range = xrange
-
         windIn = wind(tank, w)
-        res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][3]
-#push!(res,tmp)
+        tempres=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1]
+        resR[i], resV[i], resH[i]= (inv(RLos)*tempres)#[3]
+
     end
 
-    σcrossₜ=fit(Normal, res)
-    return σcrossₜ
+    σcrossₜ=fit(Normal, resH)
+    σcrossV=fit(Normal, resV)
+    σcrossR=fit(Normal, resR)
+    return σcrossₜ,σcrossV,σcrossR,resR, resV, resH
 end
 
 """
     windRangeError(σ,wind,tank, weapon,proj, target, aero;args ...)
 
-Returns the normal distribution for the impact points (vertical coordinate).
+Returns the normal distribution for the impact points (vertical coordinate) and a vector that contains 
+    the impact points vertical coordinates generated in the Monte Carlo.
 The function performs a Monte Carlo simulation by sampling the wind (range field).
 It is assumes that the range wind variation is a gaussian distribution with
 μ = wind.range and standard deviation = σ:
@@ -67,24 +80,39 @@ It is assumes that the range wind variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function windRangeError(σ::Float64,w::Wind,tank::Tank, weapon::Gun,proj::AbstractPenetrator, target::AbstractTarget, aero::DataFrame;N=100)
-
+function windRangeError(σ::Float64,w::Wind,tankOR::Tank, weaponOR::Gun,projOR::AbstractPenetrator, targetOR::AbstractTarget, aero::DataFrame;N=100)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    #windIn = wind(tank, w)
+    adjustedFire!(target, proj, weapon,aero,tank,w=w)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
     d = Normal(w.range,σ)
     x = rand(d, N)
-    res = zeros(N)#Array{Float64}#[]
+    #res = zeros(N)#Array{Float64}#[]
+    resV = zeros(N)#Arra
+    resH = zeros(N)#Arra
+    resR = zeros(N)#Arra
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
     for i=1:N
 
     #w.cross = xcross[i]
     w.range = x[i]
 
     windIn = wind(tank, w)
-    res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][2]
+    #res[i]=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1][2]
+    tempres=trajectoryMPMM(proj, target, weapon,aero,w_bar=windIn)[1]
+    resR[i], resV[i], resH[i]= (inv(RLos)*tempres)#[2]
     #push!(res,tmp)
     end
 
-    σrangeₜ =fit(Normal, res)
+    σrangeₜ =fit(Normal, resV)
+    σrangeH =fit(Normal, resH)
+    σrangeR =fit(Normal, resR)
 
-    return σrangeₜ
+    return σrangeₜ,σrangeH, σrangeR,resR, resV, resH
 end
 
 """
@@ -113,31 +141,66 @@ It is assumes that the range variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function rangeError(target::AbstractTarget, σ::Float64, tank::Tank, weapon::Gun, proj::AbstractPenetrator, aero::DataFrame; N=100)
-
+function rangeError(targetOR::AbstractTarget, σ::Float64, tankOR::Tank, weaponOR::Gun, projOR::AbstractPenetrator, aero::DataFrame; N=100)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    #println("adjusting")
+    adjustedFire!(target, proj, weapon,aero,tank)
+    #println("adjusted")
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
+    proj.velocity=muzzleVel(tank)
+    
     d = Normal(target.ρ,σ)
     x = rand(d, N)
-    QE = zeros(N)#Array{Float64}#[]
-    AZ = zeros(N)
+    #QE = zeros(N)#Array{Float64}#[]
+    #AZ = zeros(N)
+    resV = zeros(N)#Arra
+    resH = zeros(N)#Arra
+    resR = zeros(N)#Arra
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
     for i=1:N
         target.ρ = x[i]
         target.position = targetPos(target, tank)
+        #println(target.ρ)
+        adjustedFire!(target, proj, weapon,aero,tank)
+        #println("adjusted")
+        target.position= targetPos(target, tank)
+        proj.position=muzzlePos(tank)
+        proj.velocity=muzzleVel(tank) #updates muzzle velocity
+        #weapon.QE = tank.canon.θ #updates the canon
+        #weapon.AZ = tank.turret.ξ
 
-    QE[i],AZ[i]=QEfinderMPMM!(target, proj, weapon,aero)
-    #println("QE", " ", QE[i])
-    #println("AZ", " ", AZ[i])
+        tempres=trajectoryMPMM(proj, target, weapon,aero)[1]
+        resR[i], resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
+
+    
+    #QE[i],AZ[i]=QEfinderMPMM(target, proj, weapon,aero)
+   
     end
-    σQE =fit(Normal, QE)
-    σAZ = fit(Normal, AZ)
+    #σQE =fit(Normal, QE)
+    #σAZ = fit(Normal, AZ)
+    σθv =fit(Normal, resV)
+    σθh =fit(Normal, resH)
+    σθr =fit(Normal, resR)
 
 
-    return σQE,σAZ
+    return σθr,σθv ,σθh,resR,resV,resH
+
+
+
+    #return σQE,σAZ
 end
 
 """
     elevationError(σ, target,proj,weapon,tank,aero;args )
 
-Returns the normal distribution for the impact points (vertical and horizontal distribution).
+Returns the normal distribution for the impact points (vertical and horizontal distribution) and 
+    two vectorts that contains the impact points coordinates generated in the Monte Carlo.
 The function performs a Monte Carlo simulation by sampling the elevation angle.
 It is assumes that the elevation angle variation is a gaussian distribution with
 μ = the compute elevation angle and standard deviation = σ:
@@ -149,38 +212,58 @@ It is assumes that the elevation angle variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function elevationError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
-    weapon.AZ = rad2deg(AZ)
-    d = Normal(QE,σ)
+function elevationError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame;N=100 )
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
+    #QE,AZ=QEfinderMPMM(target, proj, weapon,aero)
+    #weapon.AZ = rad2deg(AZ)
+    #weapon.AZ = AZ
+    d = Normal(weapon.QE ,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR = zeros(N)#Arra
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
-        weapon.QE=rad2deg(x[i])
+        #weapon.QE=rad2deg(x[i])
+        weapon.QE=x[i]
+        tank.canon.θ = weapon.QE
         target.position= targetPos(target, tank)
         proj.position=muzzlePos(tank)
         proj.velocity=muzzleVel(tank)
 
 
-    resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+    #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+    tempres=trajectoryMPMM(proj, target, weapon,aero)[1]
+    resR[i], resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
+
     #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σθv =fit(Normal, resV)
     σθh =fit(Normal, resH)
+    σθr =fit(Normal, resR)
 
 
-    return σθv ,σθh
+    return σθr,σθv ,σθh,resR,resV,resH
 
 end
 
 """
     azimuthError(σ, target,proj,weapon,tank,aero;args )
 
-Returns the normal distribution for the impact points (vertical and horizontal distribution).
+Returns the normal distribution for the impact points (vertical and horizontal distribution) and 
+    two vectorts that contains the impact points coordinates generated in the Monte Carlo..
 The function performs a Monte Carlo simulation by sampling the azimuth angle.
 It is assumes that the elevation angle variation is a gaussian distribution with
 μ = the computed azimuth angle and standard deviation = σ:
@@ -192,38 +275,57 @@ It is assumes that the elevation angle variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function azimuthError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100 )
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
-    weapon.QE = rad2deg(QE)
-    d = Normal(AZ,σ)
+function azimuthError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame;N=100 )
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
+    target.position= targetPos(target, tank)
+    proj.position=muzzlePos(tank)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
+    #QE,AZ=QEfinderMPMM(target, proj, weapon,aero)
+    #weapon.QE = rad2deg(QE)
+    #weapon.QE = QE
+    d = Normal(weapon.AZ,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR=zeros(N)
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
-        weapon.AZ=rad2deg(x[i])
+        #weapon.AZ=rad2deg(x[i])
+        weapon.AZ=x[i]
+        tank.turret.ξ = weapon.AZ
         target.position= targetPos(target, tank)
         proj.position=muzzlePos(tank)
         proj.velocity=muzzleVel(tank)
 
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        tempres=trajectoryMPMM(proj, target, weapon,aero)[1]
+    resR[i],resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σξv =fit(Normal, resV)
     σξh =fit(Normal, resH)
+    σξr =fit(Normal, resR)
 
 
-    return σξv ,σξh
+    return σξr ,σξv ,σξh,resR,resV,resH
 
 end
 
 """
     muzzleVelError(σ, target,proj,weapon,tank,aero;args )
 
-Returns the normal distribution for the impact points (vertical and horizontal distribution).
+Returns the normal distribution for the impact points (vertical and horizontal distribution) and 
+    two vectorts that contains the impact points coordinates generated in the Monte Carlo..
 The function performs a Monte Carlo simulation by sampling the muzzle velocity.
 It is assumes that the muzzle velocity variation is a gaussian distribution with
 μ = weapon.u₀ and standard deviation = σ:
@@ -235,38 +337,49 @@ It is assumes that the muzzle velocity variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function muzzleVelError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
-    weapon.QE = rad2deg(QE)
-    weapon.AZ = rad2deg(AZ)
+function muzzleVelError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame;N=100)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
     target.position= targetPos(target, tank)
     proj.position=muzzlePos(tank)
     d = Normal(weapon.u₀,σ)
     x = rand(d, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR=zeros(N)
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
 
         weapon.u₀ = x[i]
         proj.velocity=muzzleVel(tank)
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+        tempres=trajectoryMPMM(proj, target, weapon,aero)[1]
+    resR[i],resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σv =fit(Normal, resV)
     σh =fit(Normal, resH)
+    σr =fit(Normal, resR)
 
 
-    return σv ,σh
+    return σr,σv ,σh,resR,resV,resH
 end
 
 """
     temperatureError(σ, target,proj,weapon,tank,aero, atmosphere;args )
 
-Returns the normal distribution for the impact points (vertical and horizontal distribution).
+Returns the normal distribution for the impact points (vertical and horizontal distribution) and 
+    two vectorts that contains the impact points coordinates generated in the Monte Carlo..
 The function performs a Monte Carlo simulation by sampling the air temperature.
 It is assumes that the temperature variation is a gaussian distribution with
 μ = atmosphere.t and standard deviation = σ:
@@ -279,10 +392,15 @@ It is assumes that the temperature variation is a gaussian distribution with
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
-    weapon.QE = rad2deg(QE)
-    weapon.AZ = rad2deg(AZ)
+function temperatureError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame,atmosphere::Air;N=100)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank,atmosphere=atmosphere)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
     proj.velocity=muzzleVel(tank)
     target.position= targetPos(target, tank)
     proj.position=muzzlePos(tank)
@@ -290,28 +408,38 @@ function temperatureError(σ::Float64, target::AbstractTarget,proj::AbstractPene
     x = rand(d, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR=zeros(N)
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
 
         atmosphere.t = x[i]
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        tempres=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1]
+    resR[i],resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σv =fit(Normal, resV)
     σh =fit(Normal, resH)
+    σr =fit(Normal, resR)
 
 
-    return σv ,σh
+    return σr,σv ,σh,resR,resV,resH
 
 end
 
-function pressureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
-    weapon.QE = rad2deg(QE)
-    weapon.AZ = rad2deg(AZ)
+function pressureError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame,atmosphere::Air;N=100)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank, atmosphere=atmosphere)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
     proj.velocity=muzzleVel(tank)
     target.position= targetPos(target, tank)
     proj.position=muzzlePos(tank)
@@ -319,28 +447,38 @@ function pressureError(σ::Float64, target::AbstractTarget,proj::AbstractPenetra
     x = rand(d, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR=zeros(N)
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
 
         atmosphere.p = x[i]
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        tempres=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1]
+    resR[i], resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σv =fit(Normal, resV)
     σh =fit(Normal, resH)
+    σr =fit(Normal, resR)
 
 
-    return σv ,σh
+    return σr,σv ,σh,resR,resV,resH
 
 end
 
-function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame,atmosphere::Air;N=100)
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
-    weapon.QE = rad2deg(QE)
-    weapon.AZ = rad2deg(AZ)
+function gunPositionError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame,atmosphere::Air;N=100)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero,atmosphere=atmosphere)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank, atmosphere=atmosphere)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
     proj.velocity=muzzleVel(tank)
     target.position= targetPos(target, tank)
     proj.position=muzzlePos(tank)
@@ -352,28 +490,34 @@ function gunPositionError(σ::Float64, target::AbstractTarget,proj::AbstractPene
     z = rand(dz, N)
     resV = zeros(N)#Arra
     resH = zeros(N)#Arra
+    resR=zeros(N)
+    RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
 
     for i=1:N
 
         proj.position = [x[i],y[i],z[i]]
 
-        resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1][2:3]
+        tempres=trajectoryMPMM(proj, target, weapon,aero,atm=atmosphere)[1]
+    resR[i],resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
     end
     σv =fit(Normal, resV)
     σh =fit(Normal, resH)
+    σr =fit(Normal, resR)
 
 
-    return σv ,σh
+    return σr,σv ,σh,resR,resV,resH
 
 end
 
 """
     cantError(σ, σmeas, target,proj,weapon,tank,aero, atmosphere;args )
 
-Returns the normal distribution for the impact points (vertical and horizontal distribution).
+Returns the normal distribution for the impact points (vertical and horizontal distribution) and 
+    two vectorts that contains the impact points coordinates generated in the Monte Carlo..
 The function performs a Monte Carlo simulation by sampling the cant angle.
 It is assumes that the cant variation is a gaussian distribution with
 μ = tank.hull.Φ and standard deviation = σ. On this value of cant we perform another sampling to
@@ -388,12 +532,17 @@ the standard deviation = σmeas:
 One optional argument is N (the number of Monte Carlo simulations). Default = 100
 
 """
-function cantError(σ::Float64, σmeas::Float64, target::AbstractTarget,proj::AbstractPenetrator,weapon::Gun,tank::Tank,aero::DataFrame;N=100)
-    QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
-    weapon.QE = rad2deg(QE)
-    weapon.AZ = rad2deg(AZ)
-    tank.canon.θ = rad2deg(QE)
-    tank.turret.ξ = rad2deg(AZ)
+function cantError(σ::Float64, targetOR::AbstractTarget,projOR::AbstractPenetrator,weaponOR::Gun,tankOR::Tank,aero::DataFrame;N=100)
+    #QE,AZ=QEfinderMPMM!(target, proj, weapon,aero)
+    target = deepcopy(targetOR)
+    proj= deepcopy(projOR)
+    weapon = deepcopy(weaponOR)
+    tank = deepcopy(tankOR)
+    adjustedFire!(target, proj, weapon,aero,tank)
+    #weapon.QE = rad2deg(QE)
+    #weapon.AZ = rad2deg(AZ)
+    #tank.canon.θ = rad2deg(QE)
+    #tank.turret.ξ = rad2deg(AZ)
 
     target.position = targetPos(target, tank)
     proj.position=muzzlePos(tank)
@@ -403,40 +552,45 @@ function cantError(σ::Float64, σmeas::Float64, target::AbstractTarget,proj::Ab
 
     x1 = rand(d1, N)
 
-    resV1 = zeros(N)#Arra
-    resH1 = zeros(N)#Arra
+    resV = zeros(N)#Arra
+    resH = zeros(N)#Arra
+    resR=zeros(N)
 
-    for i=1:N
+   # for i=1:N
 
         #tank.hull.Φ = x[i]
 
-        d2 = Normal(x1[i],σmeas)
-        resV2 = zeros(N)#Arra
-        resH2 = zeros(N)#Arra
+    #    d2 = Normal(x1[i],σmeas)
+     #   resV2 = zeros(N)#Arra
+      #  resH2 = zeros(N)#Arra
 
-        x2 = rand(d2, N)
-        for j=1:N
+       # x2 = rand(d2, N)
+       RLos = angle_to_dcm(0, -deg2rad(tank.sight.θ), deg2rad(tank.sight.ξ), :XZY)
+        for i=1:N
 
-            tank.hull.Φ = x2[j]
+            tank.hull.Φ = x1[i]
 
             target.position = targetPos(target, tank)
             proj.position=muzzlePos(tank)
             proj.velocity=muzzleVel(tank)
 
-            resV2[j], resH2[j]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+            #resV[i], resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][2:3]
+            tempres=trajectoryMPMM(proj, target, weapon,aero)[1]
+    resR[i],resV[i], resH[i]= (inv(RLos)*tempres)#[2:3]
         end
-        resV1[i] =fit(Normal, resV2).μ
-        resH1[i] =fit(Normal, resH2).μ
+       # resV1[i] =fit(Normal, resV2).μ
+        #resH1[i] =fit(Normal, resH2).μ
         #resH[i]=trajectoryMPMM(proj, target, weapon,aero)[1][3]
     #println("QE", " ", QE[i])
     #println("AZ", " ", AZ[i])
-    end
-    σv =fit(Normal, resV1)
-    σh =fit(Normal, resH1)
+    #end
+    σv =fit(Normal, resV)
+    σh =fit(Normal, resH)
+    σr =fit(Normal, resR)
 
 
 
-    return σv ,σh
+    return σr,σv ,σh,resR,resV,resH
 
 end
 
@@ -481,25 +635,27 @@ function variableBias(target::AbstractTarget,tank::Tank, weapon::Gun, proj::Abst
 
 
 if isnothing(σrange)==false
+    σrR,σrV, σrH=rangeError(target,σrange,tank, weapon, proj, aero)
 
-dQE,dAZ=rangeError(target,σrange,tank, weapon, proj, aero)
+#dQE,dAZ=rangeError(target,σrange,tank, weapon, proj, aero)
 
-σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tank,aero)
-σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tank,aero)
+#σvEl, σhEl = elevationError(dQE.σ, target,proj,weapon,tank,aero)
+#σvAz, σhAz = azimuthError(dAZ.σ, target,proj,weapon,tank,aero)
 
 
 #σR.horizontal = sqrt((rand(σhEl))^2+(rand(σhAz))^2)
 #σR.vertical = sqrt((rand(σvEl))^2+(rand(σvAz))^2)
 
-σR.horizontal = sqrt((σhEl.σ)^2+(σhAz.σ)^2)
-σR.vertical = sqrt((σvEl.σ)^2+(σvAz.σ)^2)
+σR.horizontal = σrH.σ #sqrt((σhEl.σ)^2+(σhAz.σ)^2)
+σR.vertical = σrV.σ#sqrt((σvEl.σ)^2+(σvAz.σ)^2)
 
 end
 
 if isnothing(σcross_wind)==false
-σcross_dist= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero) #m
+#σcross_dist= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero) #m
+σcrossₜ,σcrossV,σcrossR= windCrossError(σcross_wind,w,tank,weapon, proj, target, aero)[1:3]
 #σcross_value =rand(σcross_dist)
-σcross_value =σcross_dist.σ
+σcross_value =σcrossₜ.σ#σcross_dist.σ
 end
 
 if isnothing(σrange_wind)==false
